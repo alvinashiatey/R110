@@ -10,6 +10,7 @@ use tauri_plugin_dialog::DialogExt;
 
 #[derive(Debug, serde::Serialize)]
 pub struct AppResponse {
+    processed_images: Option<Vec<crate::imaging::processes::ProcessResult>>,
     image_path: String,
     image_type: String,
     image_name: String,
@@ -47,6 +48,7 @@ pub async fn select_image(
 
         // Return response
         Ok(AppResponse {
+            processed_images: None,
             image_path: selected_path,
             image_type,
             image_name,
@@ -80,17 +82,12 @@ pub fn process_selected_image(
         log::info!("Processing image: {:?}", state.process_settings);
 
         match process_image(&path, &state) {
-            Ok(new_image_path) => {
-                state.current_image = Some(new_image_path.clone());
-                let image_type = state.image_type.clone().unwrap_or_default();
-                let image_name = state.image_name.clone().unwrap_or_default();
-
-                Ok(AppResponse {
-                    image_path: new_image_path,
-                    image_type,
-                    image_name,
-                })
-            }
+            Ok(processed_result) => Ok(AppResponse {
+                processed_images: Some(processed_result),
+                image_path: path,
+                image_type: state.image_type.clone().unwrap_or_default(),
+                image_name: state.image_name.clone().unwrap_or_default(),
+            }),
             Err(e) => Err(e),
         }
     } else {

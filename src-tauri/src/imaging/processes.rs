@@ -8,13 +8,23 @@ use std::env;
 use std::fs::File;
 use std::io::BufWriter;
 
+#[derive(Debug, serde::Serialize)]
+pub struct ProcessResult {
+    channel: String,
+    image_path: String,
+}
+
 struct ImageProcessor {
     image: DynamicImage,
+    processed_images: Vec<DynamicImage>,
 }
 
 impl ImageProcessor {
     fn new(image: DynamicImage) -> Self {
-        Self { image }
+        Self {
+            image,
+            processed_images: vec![],
+        }
     }
 
     fn apply_filter(mut self, filter: Option<&crate::state::ImageFilter>) -> Self {
@@ -33,33 +43,52 @@ impl ImageProcessor {
         self
     }
 
-    fn seperate_channels(mut self, colors: Option<&Vec<String>>) -> Result<Self, Error> {
-        if let Some(colors) = colors {
-            if !colors.is_empty() {
-                let channels = ImageTreatment::new(self.image)?;
-                self.image = DynamicImage::ImageRgba8(channels.process()?);
-            }
-        }
+    fn separate_channels(mut self) -> Result<Self, Error> {
+        let channels = ImageTreatment::new(&self.image)?
+            .process()?
+            .into_iter()
+            .map(|channel| DynamicImage::ImageRgba8(channel))
+            .collect();
+
+        self.processed_images = channels;
         Ok(self)
     }
 
-    fn save(self, filename: &str) -> Result<String, Error> {
+    fn save(self, filename: &str) -> Result<Vec<ProcessResult>, Error> {
         let temp_dir = env::temp_dir();
         let output_path = temp_dir.join(filename);
+        let mut results: Vec<ProcessResult> = vec![];
 
-        let file = File::create(&output_path)
-            .map_err(|e| Error::Processing(format!("Failed to create temp file: {}", e)))?;
-        let mut writer = BufWriter::new(file);
+        for (i, img) in self.processed_images.iter().enumerate() {
+            let channel = match i {
+                0 => "cyan",
+                1 => "magenta",
+                2 => "yellow",
+                3 => "black",
+                _ => "unknown",
+            };
 
-        self.image
-            .write_to(&mut writer, ImageFormat::Png)
-            .map_err(|e| Error::Processing(e.to_string()))?;
+            let channel_path = output_path.with_file_name(format!("{}_{}.png", channel, i));
+            let file = File::create(&channel_path)
+                .map_err(|e| Error::Processing(format!("Failed to create temp file: {}", e)))?;
+            let mut writer = BufWriter::new(file);
 
-        Ok(output_path.to_string_lossy().to_string())
+            img.write_to(&mut writer, ImageFormat::Png)
+                .map_err(|e| Error::Processing(e.to_string()))?;
+
+            let result = ProcessResult {
+                channel: channel.to_string(),
+                image_path: channel_path.to_string_lossy().to_string(),
+            };
+
+            results.push(result);
+        }
+
+        Ok(results)
     }
 }
 
-pub fn process_image(file_path: &str, state: &AppStateInner) -> Result<String, Error> {
+pub fn process_image(file_path: &str, state: &AppStateInner) -> Result<Vec<ProcessResult>, Error> {
     let img = open(file_path).map_err(|e| Error::Processing(e.to_string()))?;
     let filter = state
         .process_settings
@@ -69,10 +98,6 @@ pub fn process_image(file_path: &str, state: &AppStateInner) -> Result<String, E
         .process_settings
         .as_ref()
         .and_then(|s| s.effect.as_ref());
-    let colors = state
-        .process_settings
-        .as_ref()
-        .and_then(|s| s.colors.as_ref());
 
     let timestamp = chrono::Local::now().timestamp();
     let filename = format!(
@@ -82,7 +107,7 @@ pub fn process_image(file_path: &str, state: &AppStateInner) -> Result<String, E
     );
 
     ImageProcessor::new(img)
-        .seperate_channels(colors)?
+        .separate_channels()?
         .apply_filter(filter)
         .apply_effect(effect)
         .save(&filename)

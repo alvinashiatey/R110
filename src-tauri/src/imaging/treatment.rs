@@ -5,12 +5,12 @@ use image::{DynamicImage, RgbaImage};
 type Result<T> = std::result::Result<T, Error>;
 
 #[derive(Debug)]
-pub struct ImageTreatment {
-    image: DynamicImage,
+pub struct ImageTreatment<'a> {
+    image: &'a DynamicImage,
 }
 
-impl ImageTreatment {
-    pub fn new(image: DynamicImage) -> Result<Self> {
+impl<'a> ImageTreatment<'a> {
+    pub fn new(image: &'a DynamicImage) -> Result<Self> {
         Ok(Self { image })
     }
 
@@ -34,7 +34,11 @@ impl ImageTreatment {
         None
     }
 
-    pub fn process(&self) -> Result<RgbaImage> {
-        Ok(self.one_color())
+    pub fn process(&self) -> Result<Vec<RgbaImage>> {
+        let processed_channels = self.process_channel();
+        if let Some(channels) = processed_channels {
+            return Ok(channels);
+        }
+        Err(Error::Processing("Failed to process image".to_string()))
     }
 }
