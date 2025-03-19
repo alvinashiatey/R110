@@ -185,7 +185,6 @@
   #filter-btn.selected {
     color: rebeccapurple;
     scale: 1.2;
-    rotate: 360deg;
     filter: invert(1);
   }
 

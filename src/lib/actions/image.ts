@@ -65,9 +65,13 @@ export async function submitProcessData() {
 
   console.log("Processing data", process_data);
 
-  const { image_type } = await invoke<AppResponse>("process_selected_image", {
-    process_data,
-  });
+  const { image_type, processed_images } = await invoke<AppResponse>(
+    "process_selected_image",
+    {
+      process_data,
+    }
+  );
+  console.log(processed_images);
   const base64String = await handleImageProcessing();
   await convertAndSetImageData(base64String, image_type);
 }

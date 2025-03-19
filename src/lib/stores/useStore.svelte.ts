@@ -126,6 +126,10 @@ class AppState {
 }
 
 export interface AppResponse {
+  processed_images?: {
+    channel: string;
+    image_path: string;
+  }[];
   image_path: string;
   image_type: string;
   image_name: string;
