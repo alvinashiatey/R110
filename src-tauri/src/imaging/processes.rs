@@ -33,11 +33,11 @@ impl ImageProcessor {
         self
     }
 
-    fn apply_color_treatment(mut self, colors: Option<&Vec<String>>) -> Result<Self, Error> {
+    fn seperate_channels(mut self, colors: Option<&Vec<String>>) -> Result<Self, Error> {
         if let Some(colors) = colors {
             if !colors.is_empty() {
-                let treatment = ImageTreatment::new(self.image)?;
-                self.image = DynamicImage::ImageRgba8(treatment.process()?);
+                let channels = ImageTreatment::new(self.image)?;
+                self.image = DynamicImage::ImageRgba8(channels.process()?);
             }
         }
         Ok(self)
@@ -82,7 +82,7 @@ pub fn process_image(file_path: &str, state: &AppStateInner) -> Result<String, E
     );
 
     ImageProcessor::new(img)
-        .apply_color_treatment(colors)?
+        .seperate_channels(colors)?
         .apply_filter(filter)
         .apply_effect(effect)
         .save(&filename)
