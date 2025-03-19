@@ -1,4 +1,4 @@
-use image::{DynamicImage, GenericImageView, Rgba, RgbaImage};
+use image::{DynamicImage, RgbaImage};
 use rayon::prelude::*;
 
 // Allow unused variants for future expansion

@@ -8,10 +8,10 @@ use std::env;
 use std::fs::File;
 use std::io::BufWriter;
 
-#[derive(Debug, serde::Serialize)]
+#[derive(Debug, Clone, serde::Serialize)]
 pub struct ProcessResult {
-    channel: String,
-    image_path: String,
+    pub channel: String,
+    pub image_path: String,
 }
 
 struct ImageProcessor {

@@ -70,6 +70,22 @@ pub fn read_image(state: State<'_, AppState>) -> Result<String, Error> {
     }
 }
 
+#[tauri::command]
+pub async fn read_processed_images(state: State<'_, AppState>) -> Result<Vec<[String; 2]>, Error> {
+    let state = state.lock().unwrap();
+    if let Some(ref processed_images) = state.processed_images {
+        let mut images = vec![];
+        for img in processed_images {
+            let image_bytes = fs::read(&img.image_path)?;
+            let base64_string = base64_engine.encode(&image_bytes);
+            images.push([base64_string, img.channel.clone()]);
+        }
+        Ok(images)
+    } else {
+        Err(Error::NoImageSelected)
+    }
+}
+
 #[tauri::command(rename_all = "snake_case")]
 pub fn process_selected_image(
     state: State<'_, AppState>,
@@ -82,12 +98,15 @@ pub fn process_selected_image(
         log::info!("Processing image: {:?}", state.process_settings);
 
         match process_image(&path, &state) {
-            Ok(processed_result) => Ok(AppResponse {
-                processed_images: Some(processed_result),
-                image_path: path,
-                image_type: state.image_type.clone().unwrap_or_default(),
-                image_name: state.image_name.clone().unwrap_or_default(),
-            }),
+            Ok(processed_result) => {
+                state.processed_images = Some(processed_result.clone());
+                Ok(AppResponse {
+                    processed_images: Some(processed_result),
+                    image_path: path,
+                    image_type: state.image_type.clone().unwrap_or_default(),
+                    image_name: state.image_name.clone().unwrap_or_default(),
+                })
+            }
             Err(e) => Err(e),
         }
     } else {

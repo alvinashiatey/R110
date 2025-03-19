@@ -16,7 +16,8 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             select_image,
             read_image,
-            process_selected_image
+            read_processed_images,
+            process_selected_image,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

@@ -36,6 +36,7 @@ pub struct AppStateInner {
     pub image_name: Option<String>,
     pub current_image: Option<String>,
     pub process_settings: Option<ProcessSettings>,
+    pub processed_images: Option<Vec<crate::imaging::processes::ProcessResult>>,
 }
 
 pub type AppState = Mutex<AppStateInner>;
