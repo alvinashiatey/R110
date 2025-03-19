@@ -1,11 +1,10 @@
 use crate::errors::Error;
-use crate::imaging::processes::process_image;
-use crate::state::AppState;
-use crate::state::ProcessSettings;
+use crate::imaging::processes::{apply_colormap, process_image, process_image_background};
+use crate::state::{AppState, ProcessSettings, ProcessingStatus};
 use base64::{engine::general_purpose::STANDARD as base64_engine, Engine};
 use log;
 use std::fs;
-use tauri::{AppHandle, State};
+use tauri::{AppHandle, Emitter, Manager, State};
 use tauri_plugin_dialog::DialogExt;
 
 #[derive(Debug, serde::Serialize)]
@@ -14,6 +13,13 @@ pub struct AppResponse {
     image_path: String,
     image_type: String,
     image_name: String,
+    processing_status: ProcessingStatus,
+}
+
+#[derive(Debug, Clone, serde::Serialize)]
+pub struct ProcessingCompletePayload {
+    processed_images: Option<Vec<crate::imaging::processes::ProcessResult>>,
+    status: ProcessingStatus,
 }
 
 #[tauri::command]
@@ -28,7 +34,7 @@ pub async fn select_image(
         .blocking_pick_file()
         .map(|p| p.to_string())
     {
-        let mut state = state.lock().unwrap();
+        let mut state_lock = state.lock().unwrap();
 
         let image_type = selected_path
             .rsplit_once('.')
@@ -41,21 +47,67 @@ pub async fn select_image(
             .unwrap_or_default();
 
         // Store in state
-        state.image_path = Some(selected_path.clone());
-        state.current_image = Some(selected_path.clone());
-        state.image_type = Some(image_type.clone());
-        state.image_name = Some(image_name.clone());
+        state_lock.image_path = Some(selected_path.clone());
+        state_lock.current_image = Some(selected_path.clone());
+        state_lock.image_type = Some(image_type.clone());
+        state_lock.image_name = Some(image_name.clone());
+        state_lock.processing_status = ProcessingStatus::Processing;
 
-        // Return response
+        // Clone what we need for the background task
+        let image_path = selected_path.clone();
+        let app_handle = app.clone();
+
+        // Create a background task to process the image
+        tauri::async_runtime::spawn(async move {
+            // Process the image in the background
+            let process_result = match process_image_background(&image_path) {
+                Ok(result) => {
+                    let app_state = app_handle.state::<AppState>();
+                    let mut state = app_state.lock().unwrap();
+                    state.processed_images = Some(result.clone());
+                    state.processing_status = ProcessingStatus::Completed;
+                    log::info!("Background processing completed successfully");
+
+                    // Create the payload with the processed images
+                    ProcessingCompletePayload {
+                        processed_images: Some(result),
+                        status: ProcessingStatus::Completed,
+                    }
+                }
+                Err(e) => {
+                    let app_state = app_handle.state::<AppState>();
+                    let mut state = app_state.lock().unwrap();
+                    state.processing_status = ProcessingStatus::Failed;
+                    log::error!("Background processing failed: {}", e);
+
+                    // Create the payload with error status and no images
+                    ProcessingCompletePayload {
+                        processed_images: None,
+                        status: ProcessingStatus::Failed,
+                    }
+                }
+            };
+
+            // Emit an event to notify the frontend that processing is complete
+            let _ = app_handle.emit("processing-complete", process_result);
+        });
+
+        // Return immediate response
         Ok(AppResponse {
             processed_images: None,
             image_path: selected_path,
             image_type,
             image_name,
+            processing_status: ProcessingStatus::Processing,
         })
     } else {
         Err(Error::NoImageSelected)
     }
+}
+
+#[tauri::command]
+pub fn get_processing_status(state: State<'_, AppState>) -> ProcessingStatus {
+    state.lock().unwrap().processing_status.clone()
 }
 
 #[tauri::command]
@@ -87,6 +139,16 @@ pub async fn read_processed_images(state: State<'_, AppState>) -> Result<Vec<[St
 }
 
 #[tauri::command(rename_all = "snake_case")]
+pub async fn process_colormap(
+    _: State<'_, AppState>,
+    image_path: String,
+    hex_color: String,
+) -> Result<String, Error> {
+    let colormap = apply_colormap(&image_path, &hex_color)?;
+    Ok(colormap)
+}
+
+#[tauri::command(rename_all = "snake_case")]
 pub fn process_selected_image(
     state: State<'_, AppState>,
     process_data: ProcessSettings,
@@ -105,6 +167,7 @@ pub fn process_selected_image(
                     image_path: path,
                     image_type: state.image_type.clone().unwrap_or_default(),
                     image_name: state.image_name.clone().unwrap_or_default(),
+                    processing_status: state.processing_status.clone(),
                 })
             }
             Err(e) => Err(e),

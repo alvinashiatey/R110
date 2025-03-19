@@ -1,16 +1,18 @@
 <script lang="ts">
   import { PlusCircle, MinusCircle } from "phosphor-svelte";
   import Canvas from "@ui/Canvas.svelte";
+  import type { ProcessedImages } from "@lib/types";
 
   interface Props {
     image?: string;
     imageName?: string;
     colors?: string[];
+    processedImages?: ProcessedImages[];
   }
   const ZOOM_MIN = -30;
   const ZOOM_MAX = 100;
 
-  let { image, imageName, colors }: Props = $props();
+  let { image, imageName, colors, processedImages }: Props = $props();
   let zoomLevel = $state(ZOOM_MIN);
 
   function zoomIn() {
@@ -25,7 +27,7 @@
 <div class="image-viewer">
   <div class="image-container">
     <div class="image">
-      <Canvas {image} {zoomLevel} />
+      <Canvas {image} {zoomLevel} {colors} {processedImages} />
     </div>
 
     <div class="image-detail-panel">

@@ -1,3 +1,4 @@
+use super::colormap::ColorMap;
 use super::effects::get_effect;
 use super::filters::get_filter;
 use super::treatment::ImageTreatment;
@@ -107,8 +108,25 @@ pub fn process_image(file_path: &str, state: &AppStateInner) -> Result<Vec<Proce
     );
 
     ImageProcessor::new(img)
-        .separate_channels()?
         .apply_filter(filter)
         .apply_effect(effect)
         .save(&filename)
+}
+
+// New function for background processing
+pub fn process_image_background(file_path: &str) -> Result<Vec<ProcessResult>, Error> {
+    let img = open(file_path).map_err(|e| Error::Processing(e.to_string()))?;
+    let timestamp = chrono::Local::now().timestamp();
+    let filename = format!("processed_{}.png", timestamp);
+
+    // Only separate channels without filters/effects for the initial loading
+    ImageProcessor::new(img)
+        .separate_channels()?
+        .save(&filename)
+}
+
+pub fn apply_colormap(file_path: &str, hex: &str) -> Result<String, Error> {
+    let colormap = ColorMap::new(file_path.to_string(), hex.to_string());
+    let processed_image = colormap.apply()?;
+    Ok(processed_image.base64)
 }

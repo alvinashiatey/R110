@@ -1,7 +1,13 @@
 <script lang="ts">
   import ImageViewer from "@lib/components/ImageViewer.svelte";
   import ToolBox from "$lib/components/ToolBox.svelte";
+  import type { ProcessingCompletePayload } from "@lib/types";
   import { useStore } from "@store/useStore.svelte";
+  import { listen } from "@tauri-apps/api/event";
+
+  listen<ProcessingCompletePayload>("processing-complete", (event) => {
+    useStore.setProcessedImages(event.payload.processed_images);
+  });
 </script>
 
 <main class="container">
@@ -11,6 +17,7 @@
     image={useStore.imageData || undefined}
     imageName={useStore.imageName || undefined}
     colors={useStore.processState.colors || undefined}
+    processedImages={useStore.processedImages || undefined}
   />
   <ToolBox />
 </main>

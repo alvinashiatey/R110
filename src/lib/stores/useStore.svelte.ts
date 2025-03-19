@@ -1,4 +1,5 @@
 import { config } from "@utils/config";
+import type { ProcessData, ProcessedImages } from "@lib/types";
 
 // Add these enum definitions at the top
 export enum ImageEffect {
@@ -39,6 +40,8 @@ class AppState {
   imagePath = $state<string | null>(null);
   imageData = $state<string | null>(null);
   imageName = $state<string | null>(null);
+  processedImages = $state<ProcessedImages[]>([]);
+  colormapCache = $state<Map<string, HTMLCanvasElement>>(new Map());
 
   processState = $state<ProcessState>({
     shouldFilter: false,
@@ -58,7 +61,6 @@ class AppState {
   };
 
   setImageData = async (data: string) => {
-    console.log("Setting image data");
     this.imageData = data;
   };
 
@@ -77,13 +79,45 @@ class AppState {
     this.processState = state;
   };
 
-  setExportState = async (state: ExportState) => {
+  resetProcessState = async () => {
+    this.processState = {
+      shouldFilter: false,
+      isProcessing: false,
+      isProcessed: false,
+      colors: [],
+      effect: ImageEffect.Original,
+      filter: null,
+      maxColors: config.maxColors,
+    };
+  };
+
+  setToColormapCache = async (key: string, canvas: HTMLCanvasElement) => {
+    this.colormapCache.set(key, canvas);
+  };
+
+  getFromColormapCache = (key: string) => {
+    return this.colormapCache.get(key);
+  };
+
+  inColormapCache = (key: string) => {
+    return this.colormapCache.has(key);
+  };
+
+  resetColormapCache = async () => {
+    this.colormapCache = new Map();
+  };
+
+  setExportState = (state: ExportState) => {
     this.exportState = state;
   };
 
   setExportType = async (exportType: string) => {
     const type = Number(exportType);
     if (!Number.isNaN(type)) this.exportState.exportType = type;
+  };
+
+  setProcessedImages = async (processedImages: ProcessedImages[]) => {
+    this.processedImages = processedImages;
   };
 
   toggleFilter = async () => {
@@ -126,10 +160,7 @@ class AppState {
 }
 
 export interface AppResponse {
-  processed_images?: {
-    channel: string;
-    image_path: string;
-  }[];
+  processed_images?: ProcessData[];
   image_path: string;
   image_type: string;
   image_name: string;

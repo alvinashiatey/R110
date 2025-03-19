@@ -16,6 +16,8 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             select_image,
             read_image,
+            process_colormap,
+            get_processing_status,
             read_processed_images,
             process_selected_image,
         ])

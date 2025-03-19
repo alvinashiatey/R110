@@ -82,13 +82,14 @@ fn split_rgb_to_cmyk_channels(img: &DynamicImage) -> Option<Vec<RgbaImage>> {
             let c_gray = 255 - c_val;
             let m_gray = 255 - m_val;
             let y_gray = 255 - y_val;
+            let k_gray = 255 - k_val;
             // K channel is already correct (255 = black, 0 = white)
 
             // Set all RGB channels to the same value to create grayscale
             c.copy_from_slice(&[c_gray, c_gray, c_gray, 255]);
             m.copy_from_slice(&[m_gray, m_gray, m_gray, 255]);
             y.copy_from_slice(&[y_gray, y_gray, y_gray, 255]);
-            k.copy_from_slice(&[k_val, k_val, k_val, 255]);
+            k.copy_from_slice(&[k_gray, k_gray, k_gray, 255]);
         });
 
     // Construct images from raw pixel data
