@@ -2,11 +2,23 @@ import type { ProcessedImages } from "@lib/types";
 import { processColormap } from "../actions/image";
 import { useStore } from "../stores/useStore.svelte";
 
-const CMYK_ORDER = ["yellow", "cyan", "black", "magenta"];
+const COLOR_ORDERS = {
+  default: ["cyan", "yellow", "magenta", "black"],
+  threeColor: ["black", "magenta", "yellow", "cyan"],
+} as const;
 
 const sortImagesByChannel = (images: ProcessedImages[]): ProcessedImages[] => {
+  const orderKey =
+    useStore.processState.maxColors < 3 ? "threeColor" : "default";
+
   return [...images].sort(
-    (a, b) => CMYK_ORDER.indexOf(a.channel) - CMYK_ORDER.indexOf(b.channel)
+    (a, b) =>
+      COLOR_ORDERS[orderKey].indexOf(
+        a.channel as (typeof COLOR_ORDERS)[typeof orderKey][number]
+      ) -
+      COLOR_ORDERS[orderKey].indexOf(
+        b.channel as (typeof COLOR_ORDERS)[typeof orderKey][number]
+      )
   );
 };
 
@@ -144,13 +156,13 @@ const processCMYKImages = async (
     throw new Error("Expected exactly 4 images (C, M, Y, K).");
   }
 
-  // Sort images by CMYK order
+  // Sort images by channel order, determined by hexColors length
   const sortedImages = sortImagesByChannel(images);
 
   // Trim `#FFFFFF` padding and ensure we have at least 4 colors
   const assignedColors = hexColors.slice(0, 4);
 
-  // Process images in CMYK order
+  // Process images in the determined order
   const canvases = await Promise.all(
     sortedImages.map((image, index) =>
       applyColorMap(image.image_path, assignedColors[index] || "#FFFFFF")
@@ -172,4 +184,4 @@ function debounce<T extends (...args: any[]) => void>(
   };
 }
 
-export const debouncedProcess = debounce(processCMYKImages, 100);
+export const processCMYKImagesDebounced = debounce(processCMYKImages, 100);

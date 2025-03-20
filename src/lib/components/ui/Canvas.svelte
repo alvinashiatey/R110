@@ -1,7 +1,10 @@
 <script lang="ts">
   import { onMount } from "svelte";
   import type { ProcessedImages } from "../../types";
-  import { drawImageScaled, debouncedProcess } from "../../utils/canvas";
+  import {
+    drawImageScaled,
+    processCMYKImagesDebounced,
+  } from "../../utils/canvas";
 
   interface Props {
     image?: string;
@@ -22,7 +25,13 @@
 
   $effect(() => {
     if (processedImages && processedImages.length && colors && colors.length) {
-      debouncedProcess(processedImages, colors, canvas, ctx, zoomLevel);
+      processCMYKImagesDebounced(
+        processedImages,
+        colors,
+        canvas,
+        ctx,
+        zoomLevel
+      );
     } else {
       if (ctx && image && zoomLevel !== undefined) {
         const img = new Image();

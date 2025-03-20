@@ -1,6 +1,6 @@
 use crate::errors::Error;
 use base64::{engine::general_purpose::STANDARD as base64_engine, Engine};
-use image::{ImageBuffer, ImageFormat, Rgba, RgbaImage};
+use image::ImageFormat;
 use rayon::prelude::*;
 use std::io::Cursor;
 
@@ -29,40 +29,31 @@ impl ColorMap {
 
     pub fn apply(&self) -> Result<ProcessedImage, Error> {
         let img = match image::open(&self.image_path) {
-            Ok(img) => img.to_luma8(),
-            Err(e) => return Err(Error::Processing(e.to_string())),
+            Ok(img) => img,
+            Err(e) => return Err(Error::Processing(format!("Failed to open image: {}", e))),
         };
 
-        let (width, height) = img.dimensions();
-        let mut new_img: RgbaImage = ImageBuffer::new(width, height);
+        let mut rgb_img = img.to_rgb8();
         let (r, g, b) = Self::hex_to_rgb(&self.hex);
 
-        // Pre-calculate floating-point values for efficiency
-        let r_f32 = r as f32;
-        let g_f32 = g as f32;
-        let b_f32 = b as f32;
+        rgb_img.par_chunks_mut(3).for_each(|pixel| {
+            let grayscale =
+                (0.299 * pixel[0] as f32 + 0.587 * pixel[1] as f32 + 0.114 * pixel[2] as f32) as u8;
+            let inverted = 255 - grayscale;
 
-        new_img
-            .enumerate_pixels_mut()
-            .par_bridge()
-            .for_each(|(x, y, pixel)| {
-                let grayscale = img.get_pixel(x, y)[0];
-                let inverted = 255 - grayscale;
+            let grayscale_f32 = grayscale as f32 / 255.0;
+            let inverted_f32 = inverted as f32 / 255.0;
 
-                let grayscale_f32 = grayscale as f32 / 255.0;
-                let inverted_f32 = inverted as f32 / 255.0;
-
-                let new_r = (inverted_f32 * r_f32 + grayscale_f32 * 255.0) as u8;
-                let new_g = (inverted_f32 * g_f32 + grayscale_f32 * 255.0) as u8;
-                let new_b = (inverted_f32 * b_f32 + grayscale_f32 * 255.0) as u8;
-
-                *pixel = Rgba([new_r, new_g, new_b, 255]);
-            });
+            pixel[0] = (inverted_f32 * r as f32 + grayscale_f32 * 255.0) as u8;
+            pixel[1] = (inverted_f32 * g as f32 + grayscale_f32 * 255.0) as u8;
+            pixel[2] = (inverted_f32 * b as f32 + grayscale_f32 * 255.0) as u8;
+        });
 
         let mut buffer = Cursor::new(Vec::new());
-        new_img
+        rgb_img
             .write_to(&mut buffer, ImageFormat::Png)
-            .map_err(|e| Error::Processing(e.to_string()))?;
+            .map_err(|e| Error::Processing(format!("Failed to encode image: {}", e)))?;
+
         let base64_string = base64_engine.encode(buffer.into_inner());
 
         Ok(ProcessedImage {

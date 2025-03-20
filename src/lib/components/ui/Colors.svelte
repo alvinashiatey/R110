@@ -41,6 +41,11 @@
   function isColorDisabled(hex: string): boolean {
     return selectedColors.length >= max && !selectedColors.includes(hex);
   }
+
+  // Helper function to get the index number of a selected color
+  function getSelectionNumber(hex: string): number {
+    return selectedColors.indexOf(hex) + 1;
+  }
 </script>
 
 <div class="colors">
@@ -56,6 +61,9 @@
       aria-pressed={selectedColors.includes(color.hex)}
       aria-label={`Select ${color.name}`}
     >
+      {#if selectedColors.includes(color.hex)}
+        <span class="selection-number">{getSelectionNumber(color.hex)}</span>
+      {/if}
       <span class="sr-only">{color.name}</span>
     </button>
   {/each}
@@ -86,6 +94,10 @@
   }
 
   .color {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
     width: 1.5rem;
     height: 1.5rem;
     border-radius: 50%;
@@ -107,5 +119,16 @@
   .color.disabled {
     opacity: 0.5;
     cursor: not-allowed;
+  }
+
+  .selection-number {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    color: white;
+    font-size: 0.75rem;
+    font-weight: bold;
+    text-shadow: 0 0 2px black;
   }
 </style>

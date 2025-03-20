@@ -15,8 +15,7 @@
 
   $effect(() => {
     isProcessActive =
-      (useStore.processState.colors.length > 0 ||
-        useStore.processState.effect !== ImageEffect.Original ||
+      (useStore.processState.effect !== ImageEffect.Original ||
         useStore.processState.filter) &&
       useStore.imageData !== null
         ? true
@@ -87,13 +86,13 @@
       </div>
 
       <div class="filter">
-        <button
+        <!-- <button
           class:selected={useStore.processState.shouldFilter}
           id="filter-btn"
           onclick={() => useStore.toggleFilter()}
         >
           <Sparkle size="1.25rem" />
-        </button>
+        </button> -->
       </div>
 
       <div class="export-type btn">
@@ -120,6 +119,7 @@
     <button
       id="process"
       class:active={isProcessActive}
+      disabled={!isProcessActive}
       onclick={() => submitProcessData()}>Process</button
     >
     <button id="export"> Export </button>
@@ -176,7 +176,7 @@
     text-wrap: nowrap;
   }
 
-  #filter-btn {
+  /* #filter-btn {
     height: 100%;
     cursor: pointer;
     transition: all 0.2s cubic-bezier(0.55, 0.055, 0.675, 0.19);
@@ -186,7 +186,7 @@
     color: rebeccapurple;
     scale: 1.2;
     filter: invert(1);
-  }
+  } */
 
   .bar {
     display: flex;
@@ -198,6 +198,12 @@
   article.bar:last-of-type > * {
     flex: 1;
     width: calc(100% / 3);
+  }
+
+  .btns button[disabled] {
+    background-color: #f0f0f0;
+    color: #c0c0c0;
+    cursor: not-allowed;
   }
 
   .btns button.active {

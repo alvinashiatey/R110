@@ -13,9 +13,6 @@ pub enum Error {
 
     #[error("Image processing error: {0}")]
     Processing(String),
-
-    #[error("Invalid input: {0}")]
-    InvalidInput(String),
 }
 
 // we must manually implement serde::Serialize

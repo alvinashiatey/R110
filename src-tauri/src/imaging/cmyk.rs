@@ -1,4 +1,4 @@
-use image::{DynamicImage, RgbaImage};
+use image::{DynamicImage, RgbImage};
 use rayon::prelude::*;
 
 // Allow unused variants for future expansion
@@ -53,23 +53,23 @@ pub fn rgb_to_cmyk(r: u8, g: u8, b: u8) -> (u8, u8, u8, u8) {
     (c, m, y, k)
 }
 
-fn split_rgb_to_cmyk_channels(img: &DynamicImage) -> Option<Vec<RgbaImage>> {
+fn split_rgb_to_cmyk_channels(img: &DynamicImage) -> Option<Vec<RgbImage>> {
     let rgb_img = img.to_rgb8();
     let (width, height) = rgb_img.dimensions();
     let num_pixels = (width * height) as usize;
 
     // Pre-allocate pixel data for each channel
-    let mut c_data = vec![0u8; num_pixels * 4];
-    let mut m_data = vec![0u8; num_pixels * 4];
-    let mut y_data = vec![0u8; num_pixels * 4];
-    let mut k_data = vec![0u8; num_pixels * 4];
+    let mut c_data = vec![0u8; num_pixels * 3];
+    let mut m_data = vec![0u8; num_pixels * 3];
+    let mut y_data = vec![0u8; num_pixels * 3];
+    let mut k_data = vec![0u8; num_pixels * 3];
 
     // Process pixels in parallel
     c_data
-        .par_chunks_mut(4)
-        .zip(m_data.par_chunks_mut(4))
-        .zip(y_data.par_chunks_mut(4))
-        .zip(k_data.par_chunks_mut(4))
+        .par_chunks_mut(3)
+        .zip(m_data.par_chunks_mut(3))
+        .zip(y_data.par_chunks_mut(3))
+        .zip(k_data.par_chunks_mut(3))
         .enumerate()
         .for_each(|(i, (((c, m), y), k))| {
             let x = (i as u32) % width;
@@ -86,22 +86,22 @@ fn split_rgb_to_cmyk_channels(img: &DynamicImage) -> Option<Vec<RgbaImage>> {
             // K channel is already correct (255 = black, 0 = white)
 
             // Set all RGB channels to the same value to create grayscale
-            c.copy_from_slice(&[c_gray, c_gray, c_gray, 255]);
-            m.copy_from_slice(&[m_gray, m_gray, m_gray, 255]);
-            y.copy_from_slice(&[y_gray, y_gray, y_gray, 255]);
-            k.copy_from_slice(&[k_gray, k_gray, k_gray, 255]);
+            c.copy_from_slice(&[c_gray, c_gray, c_gray]);
+            m.copy_from_slice(&[m_gray, m_gray, m_gray]);
+            y.copy_from_slice(&[y_gray, y_gray, y_gray]);
+            k.copy_from_slice(&[k_gray, k_gray, k_gray]);
         });
 
     // Construct images from raw pixel data
-    let c_img = RgbaImage::from_raw(width, height, c_data)?;
-    let m_img = RgbaImage::from_raw(width, height, m_data)?;
-    let y_img = RgbaImage::from_raw(width, height, y_data)?;
-    let k_img = RgbaImage::from_raw(width, height, k_data)?;
+    let c_img = RgbImage::from_raw(width, height, c_data)?;
+    let m_img = RgbImage::from_raw(width, height, m_data)?;
+    let y_img = RgbImage::from_raw(width, height, y_data)?;
+    let k_img = RgbImage::from_raw(width, height, k_data)?;
 
     Some(vec![c_img, m_img, y_img, k_img])
 }
 
-pub fn split_channels(image: &DynamicImage, channels: CmykChannel) -> Option<Vec<RgbaImage>> {
+pub fn split_channels(image: &DynamicImage, channels: CmykChannel) -> Option<Vec<RgbImage>> {
     let channel_images = split_rgb_to_cmyk_channels(image)?;
 
     let channel_flags = [

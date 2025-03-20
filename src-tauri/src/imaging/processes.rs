@@ -4,7 +4,7 @@ use super::filters::get_filter;
 use super::treatment::ImageTreatment;
 use crate::errors::Error;
 use crate::state::AppStateInner;
-use image::{open, DynamicImage, ImageFormat};
+use image::{open, DynamicImage, ImageBuffer, Rgb};
 use std::env;
 use std::fs::File;
 use std::io::BufWriter;
@@ -48,11 +48,30 @@ impl ImageProcessor {
         let channels = ImageTreatment::new(&self.image)?
             .process()?
             .into_iter()
-            .map(|channel| DynamicImage::ImageRgba8(channel))
+            .map(|channel| DynamicImage::ImageRgb8(channel))
             .collect();
 
         self.processed_images = channels;
         Ok(self)
+    }
+
+    fn save_jpeg_with_quality(
+        img: &ImageBuffer<Rgb<u8>, Vec<u8>>,
+        filepath: &str,
+        quality: u8,
+    ) -> Result<(), Error> {
+        let file = File::create(filepath)?;
+        let mut writer = BufWriter::new(file);
+
+        let mut encoder = image::codecs::jpeg::JpegEncoder::new_with_quality(&mut writer, quality);
+        encoder.encode(
+            img.as_raw(),
+            img.width(),
+            img.height(),
+            image::ExtendedColorType::Rgb8,
+        )?;
+
+        Ok(())
     }
 
     fn save(self, filename: &str) -> Result<Vec<ProcessResult>, Error> {
@@ -69,13 +88,13 @@ impl ImageProcessor {
                 _ => "unknown",
             };
 
-            let channel_path = output_path.with_file_name(format!("{}_{}.png", channel, i));
-            let file = File::create(&channel_path)
-                .map_err(|e| Error::Processing(format!("Failed to create temp file: {}", e)))?;
-            let mut writer = BufWriter::new(file);
+            let channel_path = output_path.with_file_name(format!("{}_{}.jpeg", channel, i));
 
-            img.write_to(&mut writer, ImageFormat::Png)
-                .map_err(|e| Error::Processing(e.to_string()))?;
+            ImageProcessor::save_jpeg_with_quality(
+                img.as_rgb8().unwrap(),
+                channel_path.to_str().unwrap(),
+                70,
+            )?;
 
             let result = ProcessResult {
                 channel: channel.to_string(),

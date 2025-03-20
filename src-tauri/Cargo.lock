@@ -627,26 +627,10 @@ dependencies = [
 ]
 
 [[package]]
-name = "color_processing"
-version = "0.6.3"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1c40de83f0c666c50d60dd69a281e4190e5868bac1e32e7e7ce4818a95d3aa50"
-dependencies = [
- "lazy_static",
- "regex",
-]
-
-[[package]]
 name = "color_quant"
 version = "1.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "3d7b894f5411737b7867f4827955924d7c254fc9f4d91a6aad6b097804b1018b"
-
-[[package]]
-name = "color_space"
-version = "0.5.4"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "52fdfaf2bee6357023bf7f95b15a8ef0b82759d2bce705cc45efcae9ae10f0ff"
 
 [[package]]
 name = "combine"
@@ -3335,8 +3319,6 @@ version = "0.1.0"
 dependencies = [
  "base64 0.22.1",
  "chrono",
- "color_processing",
- "color_space",
  "image",
  "log",
  "rayon",
