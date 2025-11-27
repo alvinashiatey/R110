@@ -124,9 +124,9 @@ impl ImageProcessor {
                 Error::Processing(format!("Failed to convert {} channel to RGB8", channel))
             })?;
 
-            let path_str = channel_path.to_str().ok_or_else(|| {
-                Error::Processing("Failed to convert path to string".to_string())
-            })?;
+            let path_str = channel_path
+                .to_str()
+                .ok_or_else(|| Error::Processing("Failed to convert path to string".to_string()))?;
 
             ImageProcessor::save_jpeg_with_quality(rgb_img, path_str, 70)?;
 
