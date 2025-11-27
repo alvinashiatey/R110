@@ -99,7 +99,12 @@ impl ImageProcessor {
 
     fn save(self, filename: &str) -> Result<Vec<ProcessResult>, Error> {
         let temp_dir = env::temp_dir();
-        let output_path = temp_dir.join(filename);
+        // Use the filename as a prefix to ensure uniqueness
+        let prefix = std::path::Path::new(filename)
+            .file_stem()
+            .map(|s| s.to_string_lossy())
+            .unwrap_or_else(|| "processed".into());
+
         let mut results: Vec<ProcessResult> = vec![];
 
         for (i, img) in self.processed_images.iter().enumerate() {
@@ -111,7 +116,9 @@ impl ImageProcessor {
                 _ => "unknown",
             };
 
-            let channel_path = output_path.with_file_name(format!("{}_{}.jpeg", channel, i));
+            // Create a unique filename for each channel using the prefix
+            let channel_filename = format!("{}_{}_{}.jpeg", prefix, channel, i);
+            let channel_path = temp_dir.join(channel_filename);
 
             ImageProcessor::save_jpeg_with_quality(
                 img.as_rgb8().unwrap(),
@@ -146,7 +153,7 @@ pub fn process_image(
         .as_ref()
         .and_then(|s| s.effect.as_ref());
 
-    let timestamp = chrono::Local::now().timestamp();
+    let timestamp = chrono::Local::now().timestamp_millis();
     let filename = format!(
         "processed_{}_{}.png",
         timestamp,
@@ -172,7 +179,7 @@ pub fn process_image(
 // New function for background processing
 pub fn process_image_background(file_path: &str) -> Result<Vec<ProcessResult>, Error> {
     let img = open(file_path).map_err(|e| Error::Processing(e.to_string()))?;
-    let timestamp = chrono::Local::now().timestamp();
+    let timestamp = chrono::Local::now().timestamp_millis();
     let filename = format!("processed_{}.png", timestamp);
 
     // Only separate channels without filters/effects for the initial loading

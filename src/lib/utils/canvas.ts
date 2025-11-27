@@ -210,3 +210,37 @@ function debounce<T extends (...args: any[]) => void>(
 }
 
 export const processCMYKImagesDebounced = debounce(processCMYKImages, 100);
+
+/**
+ * Creates a full-resolution composed image from the CMYK layers
+ * This is used for saving the image at original quality regardless of zoom
+ */
+export const createFullResolutionComposedImage = (
+  layers: HTMLCanvasElement[]
+): HTMLCanvasElement | null => {
+  if (!layers.length || !layers[0].width || !layers[0].height) return null;
+
+  const width = layers[0].width;
+  const height = layers[0].height;
+
+  const outputCanvas = document.createElement("canvas");
+  outputCanvas.width = width;
+  outputCanvas.height = height;
+  const ctx = outputCanvas.getContext("2d")!;
+
+  // Start with white background
+  ctx.fillStyle = "#FFFFFF";
+  ctx.fillRect(0, 0, width, height);
+
+  // Start with the first image using normal mode
+  ctx.globalCompositeOperation = "source-over";
+  ctx.drawImage(layers[0], 0, 0);
+
+  // Multiply blend the rest
+  for (let i = 1; i < layers.length; i++) {
+    ctx.globalCompositeOperation = "multiply";
+    ctx.drawImage(layers[i], 0, 0);
+  }
+
+  return outputCanvas;
+};

@@ -1,7 +1,8 @@
 <script lang="ts">
-  import { PlusCircle, MinusCircle } from "phosphor-svelte";
+  import { PlusCircle, MinusCircle, FloppyDisk } from "phosphor-svelte";
   import Canvas from "@ui/Canvas.svelte";
   import type { ProcessedImages } from "@lib/types";
+  import { saveComposedImage } from "@lib/actions/image";
 
   interface Props {
     image?: string;
@@ -10,24 +11,54 @@
     processedImages?: ProcessedImages[];
   }
   const ZOOM_MIN = -30;
-  const ZOOM_MAX = 200;
+  const ZOOM_MAX = 300;
 
   let { image, imageName, colors, processedImages }: Props = $props();
   let zoomLevel = $state(ZOOM_MIN);
+  let canvasElement: HTMLCanvasElement | null = $state(null);
+  let getFullResImage: (() => HTMLCanvasElement | null) | null = $state(null);
 
   function zoomIn() {
-    if (zoomLevel < ZOOM_MAX) zoomLevel += 10;
+    if (zoomLevel < ZOOM_MAX) zoomLevel += 20;
   }
 
   function zoomOut() {
-    if (zoomLevel > ZOOM_MIN) zoomLevel -= 10;
+    if (zoomLevel > ZOOM_MIN) zoomLevel -= 20;
   }
+
+  function handleSave() {
+    // Use full resolution image if available, otherwise fall back to display canvas
+    const fullResCanvas = getFullResImage?.();
+    if (fullResCanvas) {
+      saveComposedImage(fullResCanvas);
+    } else if (canvasElement) {
+      saveComposedImage(canvasElement);
+    }
+  }
+
+  function setCanvasRef(el: HTMLCanvasElement) {
+    canvasElement = el;
+  }
+
+  function setFullResolutionGetter(fn: () => HTMLCanvasElement | null) {
+    getFullResImage = fn;
+  }
+
+  // Check if we have a composed image to save (processed images with colors)
+  let canSave = $derived(processedImages && processedImages.length > 0);
 </script>
 
 <div class="image-viewer">
   <div class="image-container">
     <div class="image">
-      <Canvas {image} {zoomLevel} {colors} {processedImages} />
+      <Canvas
+        {image}
+        {zoomLevel}
+        {colors}
+        {processedImages}
+        canvasRef={setCanvasRef}
+        getFullResolutionImage={setFullResolutionGetter}
+      />
     </div>
 
     <div class="image-detail-panel">
@@ -38,6 +69,11 @@
           </p>
         </div>
         <div class="buttons">
+          {#if canSave}
+            <button onclick={handleSave} title="Save composed image">
+              <FloppyDisk size="1.25rem" />
+            </button>
+          {/if}
           <button onclick={zoomOut} disabled={zoomLevel === ZOOM_MIN}>
             <MinusCircle size="1.25rem" />
           </button>

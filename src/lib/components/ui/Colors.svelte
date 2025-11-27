@@ -60,6 +60,7 @@
       type="button"
       aria-pressed={selectedColors.includes(color.hex)}
       aria-label={`Select ${color.name}`}
+      title={color.name}
     >
       {#if selectedColors.includes(color.hex)}
         <span class="selection-number">{getSelectionNumber(color.hex)}</span>

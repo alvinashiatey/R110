@@ -7,7 +7,7 @@ pub trait ImageEffect {
 pub struct Dither;
 pub struct HalfTone;
 pub struct Threshold;
-pub struct Posterize;
+
 pub struct Original;
 
 impl ImageEffect for Original {
@@ -145,29 +145,11 @@ impl ImageEffect for Threshold {
     }
 }
 
-impl ImageEffect for Posterize {
-    fn apply(&self, image: &DynamicImage) -> DynamicImage {
-        let gray = image.to_luma8();
-        let mut output = RgbImage::new(gray.width(), gray.height());
-        let levels = 4;
-        let step = 255 / (levels - 1);
-
-        for (x, y, pixel) in gray.enumerate_pixels() {
-            let val = pixel[0];
-            // Integer division handles the quantization
-            let new_val = (val / step) * step;
-            output.put_pixel(x, y, Rgb([new_val, new_val, new_val]));
-        }
-        DynamicImage::ImageRgb8(output)
-    }
-}
-
 pub fn get_effect(effect: &crate::state::ImageEffect) -> Box<dyn ImageEffect> {
     match effect {
         crate::state::ImageEffect::Dither => Box::new(Dither),
         crate::state::ImageEffect::HalfTone => Box::new(HalfTone),
         crate::state::ImageEffect::Threshold => Box::new(Threshold),
-        crate::state::ImageEffect::Posterize => Box::new(Posterize),
         crate::state::ImageEffect::Original => Box::new(Original),
     }
 }

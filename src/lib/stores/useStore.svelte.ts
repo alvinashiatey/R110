@@ -7,7 +7,6 @@ export enum ImageEffect {
   Dither = "Dither",
   HalfTone = "HalfTone",
   Threshold = "Threshold",
-  Posterize = "Posterize",
 }
 
 export enum ImageFilter {
@@ -156,7 +155,7 @@ class AppState {
     const colorIndex = this.processState.colors.indexOf(color);
     if (colorIndex !== -1) {
       this.processState.colors = this.processState.colors.filter(
-        (c) => c !== color,
+        (c) => c !== color
       );
     } else if (this.processState.colors.length < this.processState.maxColors) {
       this.processState.colors = [...this.processState.colors, color];

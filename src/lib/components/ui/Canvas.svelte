@@ -5,6 +5,7 @@
     drawImageScaled,
     prepareCMYKLayers,
     renderCMYKLayers,
+    createFullResolutionComposedImage,
   } from "../../utils/canvas";
 
   interface Props {
@@ -12,14 +13,28 @@
     zoomLevel?: number;
     colors?: string[];
     processedImages?: ProcessedImages[];
+    canvasRef?: (el: HTMLCanvasElement) => void;
+    getFullResolutionImage?: (fn: () => HTMLCanvasElement | null) => void;
   }
 
-  let { image, zoomLevel, colors, processedImages }: Props = $props();
+  let {
+    image,
+    zoomLevel,
+    colors,
+    processedImages,
+    canvasRef,
+    getFullResolutionImage,
+  }: Props = $props();
   let canvas: HTMLCanvasElement;
   let ctx: CanvasRenderingContext2D;
 
   let layers = $state<HTMLCanvasElement[]>([]);
   let loadedImage = $state<HTMLImageElement | null>(null);
+
+  // Expose a function to get the full resolution composed image
+  function getFullResCanvas(): HTMLCanvasElement | null {
+    return createFullResolutionComposedImage(layers);
+  }
 
   let isDragging = $state(false);
   let startX = $state(0);
@@ -32,6 +47,10 @@
   onMount(() => {
     if (canvas) {
       ctx = canvas.getContext("2d")!;
+      // Expose canvas ref to parent
+      canvasRef?.(canvas);
+      // Expose full resolution getter to parent
+      getFullResolutionImage?.(() => getFullResCanvas());
     }
   });
 

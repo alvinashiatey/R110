@@ -20,6 +20,8 @@ pub fn run() {
             get_processing_status,
             read_processed_images,
             process_selected_image,
+            export_channels,
+            save_composed_image,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

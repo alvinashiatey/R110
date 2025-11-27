@@ -8,6 +8,10 @@ const RISOCOLORS: R_COLOR[] = [
     hex: "#000000",
   },
   {
+    name: "Mist",
+    hex: "#B8C7C4",
+  },
+  {
     name: "Yellow",
     hex: "#FFE800",
   },
@@ -17,6 +21,10 @@ const RISOCOLORS: R_COLOR[] = [
   },
   {
     name: "Red",
+    hex: "#FF665E",
+  },
+  {
+    name: "Bright Red",
     hex: "#F15060",
   },
   {

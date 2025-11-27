@@ -1,10 +1,11 @@
 use crate::errors::Error;
+use crate::imaging::export::{save_channels_to_disk, save_channels_to_pdf};
 use crate::imaging::processes::{apply_colormap, process_image, process_image_background};
 use crate::state::{AppState, ProcessSettings, ProcessingStatus};
 use base64::{engine::general_purpose::STANDARD as base64_engine, Engine};
 use log;
 use std::fs;
-use tauri::{AppHandle, Emitter, Manager, State};
+use tauri::{AppHandle, Manager, State};
 use tauri_plugin_dialog::DialogExt;
 
 #[derive(Debug, serde::Serialize)]
@@ -158,5 +159,107 @@ pub fn process_selected_image(
         }
     } else {
         Err(Error::NoImageSelected)
+    }
+}
+
+#[tauri::command(rename_all = "snake_case")]
+pub async fn export_channels(
+    state: State<'_, AppState>,
+    app: AppHandle,
+    export_type: String,
+) -> Result<(), Error> {
+    let state = state.lock().unwrap();
+    if let Some(processed_images) = &state.processed_images {
+        if let Some(export_path) = app
+            .dialog()
+            .file()
+            .set_directory(app.path().download_dir().unwrap())
+            .set_file_name(&state.image_name.clone().unwrap_or_default())
+            .blocking_save_file()
+            .map(|p| p.to_string())
+        {
+            // The dialog returns a full path including filename.
+            // We want to use the directory for PNGs or the full path for PDF.
+            // But our export functions expect a directory and a base filename.
+
+            let path_obj = std::path::Path::new(&export_path);
+            let parent_dir = path_obj.parent().unwrap().to_str().unwrap();
+            let file_stem = path_obj.file_stem().unwrap().to_str().unwrap();
+
+            // Get colors from process settings
+            let colors = state
+                .process_settings
+                .as_ref()
+                .and_then(|s| s.colors.as_ref());
+
+            match export_type.as_str() {
+                "0" => save_channels_to_pdf(processed_images, parent_dir, file_stem, colors)?, // PDF
+                "1" => save_channels_to_disk(processed_images, parent_dir, file_stem, colors)?, // PNG
+                _ => return Err(Error::Processing("Invalid export type".to_string())),
+            }
+            Ok(())
+        } else {
+            // User cancelled
+            Ok(())
+        }
+    } else {
+        Err(Error::Processing(
+            "No processed images to export".to_string(),
+        ))
+    }
+}
+
+#[tauri::command(rename_all = "snake_case")]
+pub async fn save_composed_image(
+    state: State<'_, AppState>,
+    app: AppHandle,
+    image_data: String,
+) -> Result<(), Error> {
+    let state = state.lock().unwrap();
+    let default_name = state
+        .image_name
+        .as_ref()
+        .map(|n| {
+            // Remove extension and add _composed suffix
+            n.rsplit_once('.')
+                .map(|(name, _)| format!("{}_composed", name))
+                .unwrap_or_else(|| format!("{}_composed", n))
+        })
+        .unwrap_or_else(|| "composed_image".to_string());
+
+    if let Some(save_path) = app
+        .dialog()
+        .file()
+        .add_filter("PNG Image", &["png"])
+        .set_directory(app.path().download_dir().unwrap())
+        .set_file_name(&default_name)
+        .blocking_save_file()
+        .map(|p| p.to_string())
+    {
+        // The image_data is a base64 string (with or without data URL prefix)
+        let base64_data = if image_data.contains(",") {
+            image_data.split(',').nth(1).unwrap_or(&image_data)
+        } else {
+            &image_data
+        };
+
+        let image_bytes = base64_engine
+            .decode(base64_data)
+            .map_err(|e| Error::Processing(format!("Failed to decode base64: {}", e)))?;
+
+        // Ensure the path has .png extension
+        let final_path = if save_path.ends_with(".png") {
+            save_path
+        } else {
+            format!("{}.png", save_path)
+        };
+
+        fs::write(&final_path, image_bytes)
+            .map_err(|e| Error::Processing(format!("Failed to save image: {}", e)))?;
+
+        Ok(())
+    } else {
+        // User cancelled
+        Ok(())
     }
 }

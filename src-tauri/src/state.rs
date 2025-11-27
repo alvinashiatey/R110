@@ -6,7 +6,6 @@ pub enum ImageEffect {
     Dither,
     HalfTone,
     Threshold,
-    Posterize,
 }
 
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
@@ -26,6 +25,7 @@ pub enum ImageFilter {
 pub struct ProcessSettings {
     pub effect: Option<ImageEffect>,
     pub filter: Option<ImageFilter>,
+    pub colors: Option<Vec<String>>,
 }
 
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize, PartialEq)]

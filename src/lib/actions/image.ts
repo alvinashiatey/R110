@@ -6,7 +6,7 @@ let isSelectingImage = false;
 
 async function convertAndSetImageData(
   base64String: string | undefined,
-  imageType: string,
+  imageType: string
 ) {
   if (!base64String) return;
   const imageDataUrl = `data:image/${imageType};base64,${base64String}`;
@@ -78,7 +78,7 @@ export async function submitProcessData() {
       "process_selected_image",
       {
         process_data,
-      },
+      }
     );
     if (processed_images?.length) {
       const images = await handleProcessedImagesRead();
@@ -88,9 +88,7 @@ export async function submitProcessData() {
             if (image.channel === images[index][1]) {
               return {
                 ...image,
-                image_data: `data:image/${image_type};base64,${
-                  images[index][0]
-                }`,
+                image_data: `data:image/${image_type};base64,${images[index][0]}`,
               } as ProcessedImages;
             }
             return undefined;
@@ -98,6 +96,7 @@ export async function submitProcessData() {
           .filter((item): item is ProcessedImages => item !== undefined);
         useStore.setProcessedImages(processedImages);
         useStore.setActiveColors(colors);
+        useStore.resetColormapCache();
       }
     } else {
       console.error("No processed images found");
@@ -112,7 +111,7 @@ export async function submitProcessData() {
 
 export async function processColormap(
   imagePath: string,
-  hexColor: string,
+  hexColor: string
 ): Promise<string> {
   try {
     return await invoke<string>("process_colormap", {
@@ -122,5 +121,23 @@ export async function processColormap(
   } catch (error) {
     console.error("Error processing colormap:", error);
     return "";
+  }
+}
+
+export async function exportChannels(exportType: string) {
+  try {
+    await invoke("export_channels", { export_type: exportType });
+  } catch (error) {
+    console.error("Error exporting channels:", error);
+  }
+}
+
+export async function saveComposedImage(canvas: HTMLCanvasElement) {
+  try {
+    // Get the canvas data as base64 PNG
+    const imageData = canvas.toDataURL("image/png");
+    await invoke("save_composed_image", { image_data: imageData });
+  } catch (error) {
+    console.error("Error saving composed image:", error);
   }
 }
