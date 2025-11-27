@@ -37,6 +37,8 @@
 
     "macOS": {
       "signingIdentity": "-"
-    }
+    },
+    "shortDescription": "A Simple Image Channel Splitter for RISO printing",
+    "longDescription": "R110 separates images into CMYK channels and allows you to assign custom RISO ink colors to each channel, making it easy to prepare artwork for Risograph printing."
   }
 }
