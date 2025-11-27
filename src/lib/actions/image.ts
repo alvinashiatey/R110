@@ -1,6 +1,12 @@
 import { type AppResponse, useStore } from "../stores/useStore.svelte";
 import { invoke } from "@tauri-apps/api/core";
 import type { Channels, ProcessedImages } from "../types";
+import { useColors } from "../stores/useColors.svelte";
+
+interface ColorInfo {
+  hex: string;
+  name: string;
+}
 
 let isSelectingImage = false;
 
@@ -68,8 +74,20 @@ export async function submitProcessData() {
   try {
     const { colors, effect, filter } = useStore.processState;
 
+    // Convert hex colors to ColorInfo objects with names from the color store
+    const colorInfos: ColorInfo[] | null =
+      colors.length > 0
+        ? colors.map((hex) => {
+            const colorData = useColors.colors.find((c) => c.hex === hex);
+            return {
+              hex,
+              name: colorData?.name || hex,
+            };
+          })
+        : null;
+
     const process_data = {
-      colors: colors.length > 0 ? colors : null,
+      colors: colorInfos,
       effect: effect || null,
       filter: filter || null,
     };

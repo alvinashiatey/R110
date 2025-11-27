@@ -170,14 +170,34 @@ pub async fn export_channels(
 ) -> Result<(), Error> {
     let state = state.lock().unwrap();
     if let Some(processed_images) = &state.processed_images {
-        if let Some(export_path) = app
+        // Get the base filename without extension
+        let base_name = state
+            .image_name
+            .as_ref()
+            .map(|n| {
+                n.rsplit_once('.')
+                    .map(|(name, _)| name.to_string())
+                    .unwrap_or_else(|| n.clone())
+            })
+            .unwrap_or_else(|| "export".to_string());
+
+        // Set up dialog with appropriate filter based on export type
+        let dialog = app
             .dialog()
             .file()
-            .set_directory(app.path().download_dir().unwrap())
-            .set_file_name(&state.image_name.clone().unwrap_or_default())
-            .blocking_save_file()
-            .map(|p| p.to_string())
-        {
+            .set_directory(app.path().download_dir().unwrap());
+
+        let dialog = match export_type.as_str() {
+            "0" => dialog
+                .add_filter("PDF Document", &["pdf"])
+                .set_file_name(&format!("{}.pdf", base_name)),
+            "1" => dialog
+                .add_filter("PNG Images", &["png"])
+                .set_file_name(&format!("{}_channels", base_name)),
+            _ => return Err(Error::Processing("Invalid export type".to_string())),
+        };
+
+        if let Some(export_path) = dialog.blocking_save_file().map(|p| p.to_string()) {
             // The dialog returns a full path including filename.
             // We want to use the directory for PNGs or the full path for PDF.
             // But our export functions expect a directory and a base filename.

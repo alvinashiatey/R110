@@ -223,11 +223,18 @@
     cursor: not-allowed;
   }
 
-  .btns button.active {
+  .btns button#process.active {
     background-color: tomato;
     color: white;
     cursor: pointer;
   }
+
+  .btns button#export.active {
+    background-color: #181818;
+    color: white;
+    cursor: pointer;
+  }
+
   .btns button.active:hover {
     /* darken background */
     filter: brightness(0.9);

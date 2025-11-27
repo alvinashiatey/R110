@@ -22,10 +22,16 @@ pub enum ImageFilter {
 }
 
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+pub struct ColorInfo {
+    pub hex: String,
+    pub name: String,
+}
+
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub struct ProcessSettings {
     pub effect: Option<ImageEffect>,
     pub filter: Option<ImageFilter>,
-    pub colors: Option<Vec<String>>,
+    pub colors: Option<Vec<ColorInfo>>,
 }
 
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize, PartialEq)]
