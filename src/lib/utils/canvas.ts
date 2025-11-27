@@ -8,18 +8,17 @@ const COLOR_ORDERS = {
 } as const;
 
 const sortImagesByChannel = (images: ProcessedImages[]): ProcessedImages[] => {
-  const orderKey = useStore.processState.maxColors < 3
-    ? "threeColor"
-    : "default";
+  const orderKey =
+    useStore.processState.maxColors < 3 ? "threeColor" : "default";
 
   return [...images].sort(
     (a, b) =>
       COLOR_ORDERS[orderKey].indexOf(
-        a.channel as (typeof COLOR_ORDERS)[typeof orderKey][number],
+        a.channel as (typeof COLOR_ORDERS)[typeof orderKey][number]
       ) -
       COLOR_ORDERS[orderKey].indexOf(
-        b.channel as (typeof COLOR_ORDERS)[typeof orderKey][number],
-      ),
+        b.channel as (typeof COLOR_ORDERS)[typeof orderKey][number]
+      )
   );
 };
 
@@ -27,16 +26,17 @@ function calculateScaling(
   img: { width: number; height: number },
   canvas: { width: number; height: number },
   zoomLevel?: number,
+  offset: { x: number; y: number } = { x: 0, y: 0 }
 ) {
   const baseScale = Math.min(
     canvas.width / img.width,
-    canvas.height / img.height,
+    canvas.height / img.height
   );
   const scale = baseScale * (1 + (zoomLevel ?? -30) / 100);
   const scaledWidth = img.width * scale;
   const scaledHeight = img.height * scale;
-  const x = (canvas.width - scaledWidth) / 2;
-  const y = (canvas.height - scaledHeight) / 2;
+  const x = (canvas.width - scaledWidth) / 2 + offset.x;
+  const y = (canvas.height - scaledHeight) / 2 + offset.y;
 
   return { scale, scaledWidth, scaledHeight, x, y };
 }
@@ -55,6 +55,7 @@ export function drawImageScaled(
   canvas: HTMLCanvasElement,
   ctx: CanvasRenderingContext2D,
   zoomLevel?: number,
+  offset: { x: number; y: number } = { x: 0, y: 0 }
 ) {
   if (!canvas || !ctx) return;
 
@@ -69,6 +70,7 @@ export function drawImageScaled(
     img,
     { width: displayWidth, height: displayHeight },
     zoomLevel,
+    offset
   );
 
   ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -77,7 +79,7 @@ export function drawImageScaled(
 
 const applyColorMap = async (
   img_path: string,
-  hexColor: string,
+  hexColor: string
 ): Promise<HTMLCanvasElement> => {
   try {
     // If the color is white, return an empty canvas immediately
@@ -113,6 +115,7 @@ const mergeImages = async (
   finalCanvas: HTMLCanvasElement,
   finalCtx: CanvasRenderingContext2D,
   zoomLevel?: number,
+  offset: { x: number; y: number } = { x: 0, y: 0 }
 ): Promise<HTMLCanvasElement> => {
   const width = canvases[0].width;
   const height = canvases[0].height;
@@ -131,6 +134,7 @@ const mergeImages = async (
     { width, height },
     { width: displayWidth, height: displayHeight },
     zoomLevel,
+    offset
   );
 
   // Start with the first image using normal mode
@@ -146,13 +150,10 @@ const mergeImages = async (
   return finalCanvas;
 };
 
-const processCMYKImages = async (
+export const prepareCMYKLayers = async (
   images: ProcessedImages[],
-  hexColors: string[],
-  canvas: HTMLCanvasElement,
-  ctx: CanvasRenderingContext2D,
-  zoomLevel?: number,
-) => {
+  hexColors: string[]
+): Promise<HTMLCanvasElement[]> => {
   if (images.length !== 4) {
     throw new Error("Expected exactly 4 images (C, M, Y, K).");
   }
@@ -168,19 +169,38 @@ const processCMYKImages = async (
   }
 
   // Process images in the determined order
-  const canvases = await Promise.all(
+  return await Promise.all(
     sortedImages.map((image, index) =>
       applyColorMap(image.image_path, assignedColors[index] || "#FFFFFF")
-    ),
+    )
   );
+};
 
-  // Merge sorted images using multiply blend mode
-  await mergeImages(canvases, canvas, ctx, zoomLevel);
+export const renderCMYKLayers = async (
+  layers: HTMLCanvasElement[],
+  canvas: HTMLCanvasElement,
+  ctx: CanvasRenderingContext2D,
+  zoomLevel?: number,
+  offset: { x: number; y: number } = { x: 0, y: 0 }
+) => {
+  if (!layers.length) return;
+  await mergeImages(layers, canvas, ctx, zoomLevel, offset);
+};
+
+const processCMYKImages = async (
+  images: ProcessedImages[],
+  hexColors: string[],
+  canvas: HTMLCanvasElement,
+  ctx: CanvasRenderingContext2D,
+  zoomLevel?: number
+) => {
+  const layers = await prepareCMYKLayers(images, hexColors);
+  await renderCMYKLayers(layers, canvas, ctx, zoomLevel);
 };
 
 function debounce<T extends (...args: any[]) => void>(
   func: T,
-  delay: number,
+  delay: number
 ): (...args: Parameters<T>) => void {
   let timeoutId: ReturnType<typeof setTimeout>;
   return function (...args: Parameters<T>) {
