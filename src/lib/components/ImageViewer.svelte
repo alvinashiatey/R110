@@ -10,7 +10,7 @@
     processedImages?: ProcessedImages[];
   }
   const ZOOM_MIN = -30;
-  const ZOOM_MAX = 100;
+  const ZOOM_MAX = 200;
 
   let { image, imageName, colors, processedImages }: Props = $props();
   let zoomLevel = $state(ZOOM_MIN);

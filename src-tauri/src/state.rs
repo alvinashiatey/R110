@@ -44,6 +44,7 @@ pub struct AppStateInner {
     pub current_image: Option<String>,
     pub process_settings: Option<ProcessSettings>,
     pub processed_images: Option<Vec<crate::imaging::processes::ProcessResult>>,
+    pub preprocessed_channels: Option<Vec<crate::imaging::processes::ProcessResult>>,
     pub processing_status: ProcessingStatus,
 }
 

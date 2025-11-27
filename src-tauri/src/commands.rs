@@ -60,36 +60,20 @@ pub async fn select_image(
         // Create a background task to process the image
         tauri::async_runtime::spawn(async move {
             // Process the image in the background
-            let process_result = match process_image_background(&image_path) {
+            match process_image_background(&image_path) {
                 Ok(result) => {
                     let app_state = app_handle.state::<AppState>();
                     let mut state = app_state.lock().unwrap();
-                    state.processed_images = Some(result.clone());
-                    state.processing_status = ProcessingStatus::Completed;
-                    log::info!("Background processing completed successfully");
-
-                    // Create the payload with the processed images
-                    ProcessingCompletePayload {
-                        processed_images: Some(result),
-                        status: ProcessingStatus::Completed,
-                    }
+                    // Store in a separate field, NOT processed_images
+                    state.preprocessed_channels = Some(result);
+                    // We don't update processing_status to Completed yet,
+                    // nor do we emit the event that updates the UI.
+                    log::info!("Background channel separation completed and cached");
                 }
                 Err(e) => {
-                    let app_state = app_handle.state::<AppState>();
-                    let mut state = app_state.lock().unwrap();
-                    state.processing_status = ProcessingStatus::Failed;
                     log::error!("Background processing failed: {}", e);
-
-                    // Create the payload with error status and no images
-                    ProcessingCompletePayload {
-                        processed_images: None,
-                        status: ProcessingStatus::Failed,
-                    }
                 }
             };
-
-            // Emit an event to notify the frontend that processing is complete
-            let _ = app_handle.emit("processing-complete", process_result);
         });
 
         // Return immediate response
@@ -159,7 +143,7 @@ pub fn process_selected_image(
         state.process_settings = Some(process_data);
         log::info!("Processing image: {:?}", state.process_settings);
 
-        match process_image(&path, &state) {
+        match process_image(&path, &state, state.preprocessed_channels.as_ref()) {
             Ok(processed_result) => {
                 state.processed_images = Some(processed_result.clone());
                 Ok(AppResponse {

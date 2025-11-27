@@ -40,6 +40,7 @@ class AppState {
   imagePath = $state<string | null>(null);
   imageData = $state<string | null>(null);
   imageName = $state<string | null>(null);
+  activeColors = $state<string[]>([]);
   processedImages = $state<ProcessedImages[]>([]);
   colormapCache = $state<Map<string, HTMLCanvasElement>>(new Map());
 
@@ -77,6 +78,10 @@ class AppState {
 
   setProcessState = async (state: ProcessState) => {
     this.processState = state;
+  };
+
+  setIsProcessing = (isProcessing: boolean) => {
+    this.processState.isProcessing = isProcessing;
   };
 
   resetProcessState = async () => {
@@ -151,11 +156,15 @@ class AppState {
     const colorIndex = this.processState.colors.indexOf(color);
     if (colorIndex !== -1) {
       this.processState.colors = this.processState.colors.filter(
-        (c) => c !== color
+        (c) => c !== color,
       );
     } else if (this.processState.colors.length < this.processState.maxColors) {
       this.processState.colors = [...this.processState.colors, color];
     }
+  };
+
+  setActiveColors = (colors: string[]) => {
+    this.activeColors = colors;
   };
 }
 

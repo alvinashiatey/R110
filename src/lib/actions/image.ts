@@ -1,4 +1,4 @@
-import { useStore, type AppResponse } from "../stores/useStore.svelte";
+import { type AppResponse, useStore } from "../stores/useStore.svelte";
 import { invoke } from "@tauri-apps/api/core";
 import type { Channels, ProcessedImages } from "../types";
 
@@ -6,7 +6,7 @@ let isSelectingImage = false;
 
 async function convertAndSetImageData(
   base64String: string | undefined,
-  imageType: string
+  imageType: string,
 ) {
   if (!base64String) return;
   const imageDataUrl = `data:image/${imageType};base64,${base64String}`;
@@ -48,6 +48,7 @@ export async function selectImage() {
       useStore.setProcessedImages([]);
       useStore.resetProcessState();
       useStore.resetColormapCache();
+      useStore.setActiveColors([]);
     }
   } catch (e) {
     console.error("Frontend Error: ", e);
@@ -62,45 +63,56 @@ export async function submitProcessData() {
     return;
   }
 
-  const { colors, effect, filter } = useStore.processState;
+  useStore.setIsProcessing(true);
 
-  const process_data = {
-    colors: colors.length > 0 ? colors : null,
-    effect: effect || null,
-    filter: filter || null,
-  };
+  try {
+    const { colors, effect, filter } = useStore.processState;
 
-  const { image_type, processed_images } = await invoke<AppResponse>(
-    "process_selected_image",
-    {
-      process_data,
+    const process_data = {
+      colors: colors.length > 0 ? colors : null,
+      effect: effect || null,
+      filter: filter || null,
+    };
+
+    const { image_type, processed_images } = await invoke<AppResponse>(
+      "process_selected_image",
+      {
+        process_data,
+      },
+    );
+    if (processed_images?.length) {
+      const images = await handleProcessedImagesRead();
+      if (images) {
+        const processedImages = processed_images
+          .map((image, index) => {
+            if (image.channel === images[index][1]) {
+              return {
+                ...image,
+                image_data: `data:image/${image_type};base64,${
+                  images[index][0]
+                }`,
+              } as ProcessedImages;
+            }
+            return undefined;
+          })
+          .filter((item): item is ProcessedImages => item !== undefined);
+        useStore.setProcessedImages(processedImages);
+        useStore.setActiveColors(colors);
+      }
+    } else {
+      console.error("No processed images found");
+      useStore.setProcessedImages([]);
     }
-  );
-  if (processed_images?.length) {
-    const images = await handleProcessedImagesRead();
-    if (images) {
-      const processedImages = processed_images
-        .map((image, index) => {
-          if (image.channel === images[index][1]) {
-            return {
-              ...image,
-              image_data: `data:image/${image_type};base64,${images[index][0]}`,
-            } as ProcessedImages;
-          }
-          return undefined;
-        })
-        .filter((item): item is ProcessedImages => item !== undefined);
-      useStore.setProcessedImages(processedImages);
-    }
-  } else {
-    console.error("No processed images found");
-    useStore.setProcessedImages([]);
+  } catch (e) {
+    console.error("Error processing image:", e);
+  } finally {
+    useStore.setIsProcessing(false);
   }
 }
 
 export async function processColormap(
   imagePath: string,
-  hexColor: string
+  hexColor: string,
 ): Promise<string> {
   try {
     return await invoke<string>("process_colormap", {

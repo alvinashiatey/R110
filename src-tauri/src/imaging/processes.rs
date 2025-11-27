@@ -28,6 +28,25 @@ impl ImageProcessor {
         }
     }
 
+    fn from_channels(channels: &[ProcessResult]) -> Result<Self, Error> {
+        let mut images = vec![];
+        for channel in channels {
+            let img = open(&channel.image_path).map_err(|e| Error::Processing(e.to_string()))?;
+            images.push(img);
+        }
+
+        // Use the first channel as the base image (it won't be used for filtering anyway)
+        let base = images
+            .first()
+            .ok_or_else(|| Error::Processing("No channels found".to_string()))?
+            .clone();
+
+        Ok(Self {
+            image: base,
+            processed_images: images,
+        })
+    }
+
     fn apply_filter(mut self, filter: Option<&crate::state::ImageFilter>) -> Self {
         if let Some(filter_type) = filter {
             let filter = get_filter(filter_type);
@@ -36,10 +55,14 @@ impl ImageProcessor {
         self
     }
 
-    fn apply_effect(mut self, effect: Option<&crate::state::ImageEffect>) -> Self {
+    fn apply_effect_to_channels(mut self, effect: Option<&crate::state::ImageEffect>) -> Self {
         if let Some(effect_type) = effect {
             let effect = get_effect(effect_type);
-            self.image = effect.apply(&self.image);
+            self.processed_images = self
+                .processed_images
+                .iter()
+                .map(|img| effect.apply(img))
+                .collect();
         }
         self
     }
@@ -108,7 +131,11 @@ impl ImageProcessor {
     }
 }
 
-pub fn process_image(file_path: &str, state: &AppStateInner) -> Result<Vec<ProcessResult>, Error> {
+pub fn process_image(
+    file_path: &str,
+    state: &AppStateInner,
+    cached_channels: Option<&Vec<ProcessResult>>,
+) -> Result<Vec<ProcessResult>, Error> {
     let img = open(file_path).map_err(|e| Error::Processing(e.to_string()))?;
     let filter = state
         .process_settings
@@ -126,9 +153,19 @@ pub fn process_image(file_path: &str, state: &AppStateInner) -> Result<Vec<Proce
         state.image_name.clone().unwrap_or_default()
     );
 
+    // If no filter is applied and we have cached channels, use them to skip separation
+    if filter.is_none() {
+        if let Some(channels) = cached_channels {
+            return ImageProcessor::from_channels(channels)?
+                .apply_effect_to_channels(effect)
+                .save(&filename);
+        }
+    }
+
     ImageProcessor::new(img)
         .apply_filter(filter)
-        .apply_effect(effect)
+        .separate_channels()?
+        .apply_effect_to_channels(effect)
         .save(&filename)
 }
 
