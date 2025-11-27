@@ -120,11 +120,15 @@ impl ImageProcessor {
             let channel_filename = format!("{}_{}_{}.jpeg", prefix, channel, i);
             let channel_path = temp_dir.join(channel_filename);
 
-            ImageProcessor::save_jpeg_with_quality(
-                img.as_rgb8().unwrap(),
-                channel_path.to_str().unwrap(),
-                70,
-            )?;
+            let rgb_img = img.as_rgb8().ok_or_else(|| {
+                Error::Processing(format!("Failed to convert {} channel to RGB8", channel))
+            })?;
+
+            let path_str = channel_path.to_str().ok_or_else(|| {
+                Error::Processing("Failed to convert path to string".to_string())
+            })?;
+
+            ImageProcessor::save_jpeg_with_quality(rgb_img, path_str, 70)?;
 
             let result = ProcessResult {
                 channel: channel.to_string(),

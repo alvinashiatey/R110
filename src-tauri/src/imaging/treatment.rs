@@ -1,5 +1,5 @@
 use crate::errors::Error;
-use crate::imaging::cmyk::{split_channels, CmykChannel};
+use crate::imaging::cmyk::{split_channels, CmykChannels};
 use image::{DynamicImage, RgbImage};
 
 type Result<T> = std::result::Result<T, Error>;
@@ -15,9 +15,7 @@ impl<'a> ImageTreatment<'a> {
     }
 
     pub fn process_channel(&self) -> Option<Vec<RgbImage>> {
-        let channel =
-            CmykChannel::Cyan | CmykChannel::Magenta | CmykChannel::Yellow | CmykChannel::Black;
-        let channels = split_channels(&self.image, channel);
+        let channels = split_channels(&self.image, CmykChannels::ALL);
         if let Some(channels) = channels {
             return Some(channels);
         }

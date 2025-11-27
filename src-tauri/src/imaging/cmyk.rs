@@ -1,32 +1,29 @@
 use image::{DynamicImage, RgbImage};
 use rayon::prelude::*;
 
-// Allow unused variants for future expansion
-#[allow(dead_code)]
+/// Represents a set of CMYK channels using bitflags
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
-pub enum CmykChannel {
-    Cyan = 0b0001,
-    Magenta = 0b0010,
-    Yellow = 0b0100,
-    Black = 0b1000,
-}
+pub struct CmykChannels(u8);
 
-impl CmykChannel {
+#[allow(dead_code)]
+impl CmykChannels {
+    pub const CYAN: CmykChannels = CmykChannels(0b0001);
+    pub const MAGENTA: CmykChannels = CmykChannels(0b0010);
+    pub const YELLOW: CmykChannels = CmykChannels(0b0100);
+    pub const BLACK: CmykChannels = CmykChannels(0b1000);
+    pub const ALL: CmykChannels = CmykChannels(0b1111);
+
     #[inline]
-    pub fn contains(&self, channel: CmykChannel) -> bool {
-        (*self as u8) & (channel as u8) != 0
+    pub fn contains(self, channel: CmykChannels) -> bool {
+        (self.0 & channel.0) != 0
     }
 }
 
-// You can also implement the bitwise OR operator for convenience
-impl std::ops::BitOr for CmykChannel {
-    type Output = CmykChannel;
+impl std::ops::BitOr for CmykChannels {
+    type Output = CmykChannels;
 
     fn bitor(self, rhs: Self) -> Self::Output {
-        // Convert the enum values to u8, perform bitwise OR, then convert back to enum
-        let result = (self as u8) | (rhs as u8);
-        // Safety: we know this is valid since we're just combining existing flags
-        unsafe { std::mem::transmute(result) }
+        CmykChannels(self.0 | rhs.0)
     }
 }
 
@@ -107,14 +104,14 @@ fn split_rgb_to_cmyk_channels(img: &DynamicImage) -> Option<Vec<RgbImage>> {
     Some(vec![c_img, m_img, y_img, k_img])
 }
 
-pub fn split_channels(image: &DynamicImage, channels: CmykChannel) -> Option<Vec<RgbImage>> {
+pub fn split_channels(image: &DynamicImage, channels: CmykChannels) -> Option<Vec<RgbImage>> {
     let channel_images = split_rgb_to_cmyk_channels(image)?;
 
     let channel_flags = [
-        (CmykChannel::Cyan, 0),
-        (CmykChannel::Magenta, 1),
-        (CmykChannel::Yellow, 2),
-        (CmykChannel::Black, 3),
+        (CmykChannels::CYAN, 0),
+        (CmykChannels::MAGENTA, 1),
+        (CmykChannels::YELLOW, 2),
+        (CmykChannels::BLACK, 3),
     ];
 
     // Filter to get only the requested channels
