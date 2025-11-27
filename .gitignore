@@ -4,6 +4,7 @@ node_modules
 /.svelte-kit
 /package
 /scripts
+.husky
 .env
 .env.*
 !.env.example
