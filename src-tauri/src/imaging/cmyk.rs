@@ -46,6 +46,12 @@ fn round_u8(value: f32) -> u8 {
 
 pub fn rgb_to_cmyk(r: u8, g: u8, b: u8) -> (u8, u8, u8, u8) {
     let max = std::cmp::max(std::cmp::max(r, g), b);
+
+    // Handle pure black (r=g=b=0) case to avoid division by zero
+    if max == 0 {
+        return (0, 0, 0, 255); // Pure black: no CMY, full K
+    }
+
     let c = round_u8(1.0 - r as f32 / max as f32);
     let m = round_u8(1.0 - g as f32 / max as f32);
     let y = round_u8(1.0 - b as f32 / max as f32);
