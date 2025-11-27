@@ -2,7 +2,7 @@
 
 A simple image channel splitter for RISO printing. R110 separates images into CMYK channels and allows you to assign custom RISO ink colors to each channel, making it easy to prepare artwork for Risograph printing.
 
-![R110 Screenshot](https://github.com/alvinashiatey/R110/raw/main/static/screenshot.png)
+![R110 Screenshot](https://github.com/alvinashiatey/R110/raw/main/static/screenshot.jpeg)
 
 ## Features
 
